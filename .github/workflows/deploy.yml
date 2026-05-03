@@ -20,7 +20,10 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /home/ubuntu/self-healing-nodejs-deployment
+            sudo chown -R ubuntu:ubuntu /home/ubuntu/self-healing-nodejs-deployment
+            git config --global --add safe.directory /home/ubuntu/self-healing-nodejs-deployment
+ 
+            cd /home/ubuntu/self-healing-nodejs-deployment/app
             
             # Ensure repo exists
             if [ ! -d ".git" ]; then
