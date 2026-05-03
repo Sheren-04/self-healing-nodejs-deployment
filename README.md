@@ -117,14 +117,23 @@ The system was tested using failure simulations:
 - Add metrics dashboard (Prometheus + Grafana)
 
 ## 📦 Setup Instructions
+# 🛠️ How to Run This Project (Step-by-Step)
+This guide will help you **provision infrastructure, deploy the application, and test the self-healing system**.
 
-### 1️⃣ Clone Repository
+## 📋 Prerequisites
+Make sure you have:
+- AWS account
+- AWS CLI configured (`aws configure`)
+- Terraform installed
+- Git installed
+- Docker (optional, for local testing)
+- SSH key pair (uploaded to AWS)
+
+## 🚀 Step 1: Clone Repository
 ```
 git clone https://github.com/YOUR_USERNAME/self-healing-nodejs-deployment.git
-
 cd self-healing-nodejs-deployment
 ```
-
 ### 2️⃣ Provision Infrastructure
 ```
 cd terraform
@@ -132,15 +141,70 @@ terraform init
 terraform apply
 ```
 
-### 3️⃣ Deploy Application (CI/CD)
-- Push code to `main` branch
-- GitHub Actions will automatically deploy
-
-
-### 4️⃣ Access Application
+### 3️⃣ Connect to Server
 ```
-http://<EC2_PUBLIC_IP>:8000
+ssh -i your-key.pem ubuntu@<EC2_PUBLIC_IP>
 ```
+
+### 4️⃣Test Application
+```
+curl http://localhost:8000
+```
+### Setup Self-Healing Script
+nano /home/ubuntu/monitor.sh
+```
+#!/bin/bash
+
+export PATH=/usr/bin:/usr/local/bin:/bin
+
+APP_URL="http://localhost:8000/health"
+LOG_FILE="/home/ubuntu/monitor.log"
+
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL)
+
+if [ "$STATUS" != "200" ]; then
+  echo "$(date) - App DOWN (status: $STATUS). Restarting..." >> $LOG_FILE
+
+  cd /home/ubuntu/self-healing-nodejs-deployment/app || exit
+  docker compose up -d --build >> $LOG_FILE 2>&1
+
+else
+  echo "$(date) - App OK (status: $STATUS)" >> $LOG_FILE
+fi
+```
+### Give Permission
+```
+chmod +x /home/ubuntu/monitor.sh
+```
+
+### Setup Cron Job
+```
+crontab -e
+```
+Add:
+```
+* * * * * /bin/bash /home/ubuntu/monitor.sh
+```
+### Verify Cron
+```
+crontab -l
+```
+### Check Logs
+```
+tail -f /home/ubuntu/monitor.log
+```
+
+### Test Self-Healing
+Test 1: Stop Container
+```
+docker ps
+docker stop <container_id>
+```
+👉 Wait 1 minute
+```
+docker ps
+```
+✔ Container should restart automatically
 
 ## 📁 Project Structure
 ```
